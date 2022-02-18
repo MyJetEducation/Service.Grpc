@@ -16,6 +16,6 @@ namespace Service.Grpc
 			AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 		}
 
-		public GrpcServiceProxy<TService> CreateGrpcService<TService>() where TService : class => new(_grpcServiceUrl, _logger);
+		public IGrpcServiceProxy<TService> CreateGrpcService<TService>() where TService : class => new GrpcServiceProxy<TService>(_grpcServiceUrl, _logger);
 	}
 }
