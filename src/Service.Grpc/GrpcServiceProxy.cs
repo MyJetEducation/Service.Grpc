@@ -20,12 +20,12 @@ namespace Service.Grpc
 		{
 			_grpcServiceUrl = grpcServiceUrl;
 			_logger = logger;
-			Service = new Lazy<TService>(GetService());
+			Service = new Lazy<TService>(() => GetService());
 		}
 
 		public async ValueTask<TResponse> TryCall<TResponse>(Func<TService, ValueTask<TResponse>> task, int tries = 3, int timeout = 500) where TResponse : class
 		{
-			TService service = GetService();
+			TService service = GetService(true);
 
 			for (var tryNumber = 1; tryNumber <= tries; tryNumber++)
 			{
@@ -49,13 +49,13 @@ namespace Service.Grpc
 			return await Task.FromResult<TResponse>(null);
 		}
 
-		private TService GetService()
+		private TService GetService(bool useCallId = false)
 		{
-			GrpcChannel grpcChannel = GrpcChannel.ForAddress(_grpcServiceUrl);
+			GrpcChannel channel = GrpcChannel.ForAddress(_grpcServiceUrl);
 
-			var callId = Guid.NewGuid();
+			Guid? callId = useCallId ? Guid.NewGuid() : null;
 
-			CallInvoker callInvoker = grpcChannel.Intercept(new PrometheusMetricsInterceptor(), new CallIdClientInterceptor(callId, _logger));
+			CallInvoker callInvoker = channel.Intercept(new PrometheusMetricsInterceptor(), new CallIdClientInterceptor(callId, _logger));
 
 			return callInvoker.CreateGrpcService<TService>();
 		}

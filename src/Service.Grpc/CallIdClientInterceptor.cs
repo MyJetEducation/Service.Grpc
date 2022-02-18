@@ -8,11 +8,11 @@ namespace Service.Grpc
 {
 	public class CallIdClientInterceptor : Interceptor
 	{
-		private readonly Guid _callId;
+		private readonly Guid? _callId;
 
 		private readonly ILogger _logger;
 
-		public CallIdClientInterceptor(Guid callId, ILogger logger)
+		public CallIdClientInterceptor(Guid? callId, ILogger logger)
 		{
 			_callId = callId;
 			_logger = logger;
@@ -20,7 +20,8 @@ namespace Service.Grpc
 
 		public override AsyncUnaryCall<TResponse> AsyncUnaryCall<TRequest, TResponse>(TRequest request, ClientInterceptorContext<TRequest, TResponse> context, AsyncUnaryCallContinuation<TRequest, TResponse> continuation)
 		{
-			context = new(context.Method, context.Host, context.Options.WithHeaders(Metadata));
+			if (ModifyMetadata)
+				context = new(context.Method, context.Host, context.Options.WithHeaders(Metadata));
 
 			Log(request, context);
 
@@ -29,7 +30,8 @@ namespace Service.Grpc
 
 		public override TResponse BlockingUnaryCall<TRequest, TResponse>(TRequest request, ClientInterceptorContext<TRequest, TResponse> context, BlockingUnaryCallContinuation<TRequest, TResponse> continuation)
 		{
-			context = new(context.Method, context.Host, context.Options.WithHeaders(Metadata));
+			if (ModifyMetadata)
+				context = new(context.Method, context.Host, context.Options.WithHeaders(Metadata));
 
 			Log(request, context);
 
@@ -38,7 +40,8 @@ namespace Service.Grpc
 
 		public override AsyncServerStreamingCall<TResponse> AsyncServerStreamingCall<TRequest, TResponse>(TRequest request, ClientInterceptorContext<TRequest, TResponse> context, AsyncServerStreamingCallContinuation<TRequest, TResponse> continuation)
 		{
-			context = new(context.Method, context.Host, context.Options.WithHeaders(Metadata));
+			if (ModifyMetadata)
+				context = new(context.Method, context.Host, context.Options.WithHeaders(Metadata));
 
 			Log(request, context);
 
@@ -47,7 +50,8 @@ namespace Service.Grpc
 
 		public override AsyncClientStreamingCall<TRequest, TResponse> AsyncClientStreamingCall<TRequest, TResponse>(ClientInterceptorContext<TRequest, TResponse> context, AsyncClientStreamingCallContinuation<TRequest, TResponse> continuation)
 		{
-			context = new(context.Method, context.Host, context.Options.WithHeaders(Metadata));
+			if (ModifyMetadata)
+				context = new(context.Method, context.Host, context.Options.WithHeaders(Metadata));
 
 			Log(null, context);
 
@@ -56,20 +60,23 @@ namespace Service.Grpc
 
 		public override AsyncDuplexStreamingCall<TRequest, TResponse> AsyncDuplexStreamingCall<TRequest, TResponse>(ClientInterceptorContext<TRequest, TResponse> context, AsyncDuplexStreamingCallContinuation<TRequest, TResponse> continuation)
 		{
-			context = new(context.Method, context.Host, context.Options.WithHeaders(Metadata));
+			if (ModifyMetadata)
+				context = new(context.Method, context.Host, context.Options.WithHeaders(Metadata));
 
 			Log(null, context);
 
 			return base.AsyncDuplexStreamingCall(context, continuation);
 		}
 
-		private Metadata Metadata => new() {new(CallIdServerInterceptor.CallIdKey, _callId.ToString())};
+		private Metadata Metadata => new() { new(CallIdServerInterceptor.CallIdKey, _callId.ToString()) };
+
+		private bool ModifyMetadata => _callId != null;
 
 		private void Log<TRequest, TResponse>(TRequest request, ClientInterceptorContext<TRequest, TResponse> context) where TRequest : class where TResponse : class =>
-			_logger.LogDebug("Process request: {requestJson}, server_host: {host}, method: {method}, callId: {callid}", 
-				JsonSerializer.Serialize(request), 
-				context.Host, 
-				context.Method, 
+			_logger.LogDebug("Process request: {requestJson}, server_host: {host}, method: {method}, callId: {callid}",
+				JsonSerializer.Serialize(request),
+				context.Host,
+				context.Method,
 				context.Options.Headers?.Get(CallIdServerInterceptor.CallIdKey)?.Value);
 	}
 }
