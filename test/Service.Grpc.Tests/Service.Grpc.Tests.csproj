@@ -14,6 +14,7 @@
     <PackageReference Include="NUnit3TestAdapter" Version="4.2.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.2.0-preview-20220131-20" />
     <PackageReference Include="MyJetEducation.Service.Core.Client" Version="1.0.29" />
+    <PackageReference PrivateAssets="All" Include="MyJetWallet.Sdk.Service" Version="2.1.7" />
   </ItemGroup>
 
   <ItemGroup>
