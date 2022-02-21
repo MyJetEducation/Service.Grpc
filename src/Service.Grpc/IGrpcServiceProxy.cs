@@ -3,9 +3,9 @@ using System.Threading.Tasks;
 
 namespace Service.Grpc
 {
-	public interface IGrpcServiceProxy<TService>
+	public interface IGrpcServiceProxy<out TService>
 	{
-		Lazy<TService> Service { get; }
+		TService Service { get; }
 
 		/// <summary>
 		///     Circuit calling service request

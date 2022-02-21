@@ -8,15 +8,12 @@ namespace Service.Grpc
 {
 	public class CallIdClientInterceptor : Interceptor
 	{
-		private readonly Guid? _callId;
-
+		private Guid? _callId;
 		private readonly ILogger _logger;
 
-		public CallIdClientInterceptor(Guid? callId, ILogger logger)
-		{
-			_callId = callId;
-			_logger = logger;
-		}
+		public CallIdClientInterceptor(ILogger logger) => _logger = logger;
+
+		public void SetCallId(Guid? callId) => _callId = callId;
 
 		public override AsyncUnaryCall<TResponse> AsyncUnaryCall<TRequest, TResponse>(TRequest request, ClientInterceptorContext<TRequest, TResponse> context, AsyncUnaryCallContinuation<TRequest, TResponse> continuation)
 		{
@@ -68,7 +65,7 @@ namespace Service.Grpc
 			return base.AsyncDuplexStreamingCall(context, continuation);
 		}
 
-		private Metadata Metadata => new() { new(CallIdServerInterceptor.CallIdKey, _callId.ToString()) };
+		private Metadata Metadata => new() {new(CallIdServerInterceptor.CallIdKey, _callId.ToString())};
 
 		private bool ModifyMetadata => _callId != null;
 
