@@ -15,13 +15,19 @@ namespace Service.Grpc
 		private readonly ILogger _logger;
 
 		public TService Service { get; }
+		public TService ServiceWithCallId { get; }
+
 		private CallIdClientInterceptor _callIdClientInterceptor;
 
 		public GrpcServiceProxy(string grpcServiceUrl, ILogger logger)
 		{
 			_grpcServiceUrl = grpcServiceUrl;
 			_logger = logger;
+			
 			Service = GetService();
+
+			_callIdClientInterceptor = new CallIdClientInterceptor(_logger);
+			ServiceWithCallId = GetService(_callIdClientInterceptor);
 		}
 
 		public async ValueTask<TResponse> TryCall<TResponse>(Func<TService, ValueTask<TResponse>> task, int tries = 3, int timeout = 500) where TResponse : class
@@ -34,7 +40,7 @@ namespace Service.Grpc
 				{
 					_logger.LogDebug("Try: {from} of {to}...", tryNumber, tries);
 
-					return await task.Invoke(Service);
+					return await task.Invoke(ServiceWithCallId);
 				}
 				catch (Exception ex)
 				{
@@ -50,13 +56,11 @@ namespace Service.Grpc
 			return await Task.FromResult<TResponse>(null);
 		}
 
-		private TService GetService()
+		private TService GetService(CallIdClientInterceptor callIdClientInterceptor = null)
 		{
 			GrpcChannel channel = GrpcChannel.ForAddress(_grpcServiceUrl);
 
-			_callIdClientInterceptor = new CallIdClientInterceptor(_logger);
-
-			CallInvoker callInvoker = channel.Intercept(new PrometheusMetricsInterceptor(), _callIdClientInterceptor);
+			CallInvoker callInvoker = channel.Intercept(new PrometheusMetricsInterceptor(), callIdClientInterceptor ?? new CallIdClientInterceptor(_logger));
 
 			return callInvoker.CreateGrpcService<TService>();
 		}
