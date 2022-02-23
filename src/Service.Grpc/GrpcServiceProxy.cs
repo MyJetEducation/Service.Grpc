@@ -15,9 +15,9 @@ namespace Service.Grpc
 		private readonly ILogger _logger;
 
 		public TService Service { get; }
-		public TService ServiceWithCallId { get; }
+		private TService ServiceWithCallId { get; }
 
-		private CallIdClientInterceptor _callIdClientInterceptor;
+		private readonly CallIdClientInterceptor _callIdClientInterceptor;
 
 		public GrpcServiceProxy(string grpcServiceUrl, ILogger logger)
 		{
@@ -52,6 +52,8 @@ namespace Service.Grpc
 						throw;
 				}
 			}
+
+			_callIdClientInterceptor.SetCallId(null);
 
 			return await Task.FromResult<TResponse>(null);
 		}
