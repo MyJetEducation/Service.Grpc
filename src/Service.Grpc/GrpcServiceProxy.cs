@@ -26,14 +26,12 @@ namespace Service.Grpc
 			
 			Service = GetService();
 
-			//_callIdClientInterceptor = new CallIdClientInterceptor(_logger);
-			//ServiceWithCallId = GetService(_callIdClientInterceptor);
+			_callIdClientInterceptor = new CallIdClientInterceptor(_logger);
+			ServiceWithCallId = GetService(_callIdClientInterceptor);
 		}
 
 		public async ValueTask<TResponse> TryCall<TResponse>(Func<TService, ValueTask<TResponse>> task, int tries = 3, int timeout = 500) where TResponse : class
 		{
-			return await task.Invoke(Service);
-
 			_callIdClientInterceptor.SetCallId(Guid.NewGuid());
 
 			for (var tryNumber = 1; tryNumber <= tries; tryNumber++)
@@ -54,8 +52,6 @@ namespace Service.Grpc
 						throw;
 				}
 			}
-
-			_callIdClientInterceptor.SetCallId(null);
 
 			return await Task.FromResult<TResponse>(null);
 		}
