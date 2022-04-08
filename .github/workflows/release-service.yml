@@ -1,0 +1,105 @@
+name: Release Service
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Extract branch name
+      uses: vazco/github-actions-branch-name@v1
+      id: branch
+
+    - id: string
+      uses: ASzc/change-string-case-action@v1
+      with:
+        string: ${{ github.event.repository.name }}
+    - uses: actions/checkout@v2
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 6.0.*
+
+    - name: Get current time
+      uses: MyJetTools/get-current-time@v2
+      id: current-time
+      with:
+        format: YYYY-MM-DD HH:mm:ss
+        utcOffset: "+00:00"
+
+    - name: Name of branch uat
+      id: branches
+      uses: ashley-taylor/regex-property-action@1.2
+      with:
+        value: ${{ github.ref }}
+        regex: ".*/"
+        flags: ""
+        replacement: ""
+
+    - name: Build
+      run: dotnet build --configuration Release /p:AssemblyVersion=${{ steps.branches.outputs.value }}
+    - name: Test
+      run: dotnet test --no-build --configuration Release
+    - name: ls
+      run: ls
+
+    - name: Publish Service
+      run: dotnet publish ./src/*${{ github.event.repository.name }}/*${{ github.event.repository.name }}.csproj --configuration Release /p:AssemblyVersion=${{ steps.branches.outputs.value }} --output ./publish-api
+    - name: Check Service dir
+      run: ls ./publish-api
+
+
+    - name: Publish image azure
+      uses: docker/build-push-action@v1
+      with:
+        username: ${{ secrets.REGISTRY_USER }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
+        path: ./publish-api
+        registry: ${{ secrets.REGISTRY_HOST }}
+        repository: ${{ secrets.REGISTRY_HOST }}/myjeteducation/${{ steps.string.outputs.lowercase }}
+        tags: ${{ steps.branches.outputs.value }}
+        build_args: app_version=${{ steps.string.outputs.lowercase }}:${{ steps.branches.outputs.value }},app_compilation_date=${{ steps.current-time.outputs.formattedTime }}
+
+  update_version_master:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+
+    - uses: actions/checkout@v2
+    - name: Extract branch name
+      uses: vazco/github-actions-branch-name@v1
+      id: branch
+
+    - id: string
+      uses: ASzc/change-string-case-action@v1
+      with:
+        string: ${{ github.event.repository.name }}
+
+    - name: Name of branch
+      id: branches
+      uses: ashley-taylor/regex-property-action@1.2
+      with:
+        value: ${{ github.ref }}
+        regex: ".*/"
+        flags: "" # Optional, defaults to "g"
+        replacement: ""
+
+    - name: get master kube yamls
+      uses: actions/checkout@v2
+      with:
+        repository: MyJetEducation/kubernetes-infrastructure
+        ref: uat
+        token: ${{ secrets.UAT_GIT_TOKEN }}
+    - run: ls
+    - run: sed -i s/${{ steps.string.outputs.lowercase }}:.*/${{ steps.string.outputs.lowercase }}:${{ steps.branches.outputs.value }}/g services/*/deployment*
+    - run: |
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        git commit -a -m "Update version of service ${{ steps.string.outputs.lowercase }}"
+        git push
