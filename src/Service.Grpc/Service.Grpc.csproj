@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference PrivateAssets="All" Include="Autofac" Version="6.3.0" />
+    <PackageReference PrivateAssets="All" Include="Autofac" Version="6.4.0" />
     <PackageReference PrivateAssets="All" Include="protobuf-net.Grpc.AspNetCore" Version="1.0.152" />
     <PackageReference PrivateAssets="All" Include="MyJetEducation.Service.Core.Client" Version="1.0.36" />
     <PackageReference PrivateAssets="All" Include="MyJetWallet.Sdk.Service" Version="2.2.3" />
